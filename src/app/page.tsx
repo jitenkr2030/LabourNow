@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import AuthModal from '@/components/auth/AuthModal'
-import EmployerDashboard from '@/components/employer/EmployerDashboard'
+import EmployerDashboard from '@/components/employer/EnhancedEmployerDashboard'
 import LabourDashboard from '@/components/labour/LabourDashboard'
 import { 
   Users, 
@@ -24,7 +24,11 @@ import {
   CheckCircle,
   ArrowRight,
   Phone,
-  MessageSquare
+  MessageSquare,
+  Car,
+  Home,
+  Building,
+  Globe
 } from 'lucide-react'
 
 export default function Home() {
@@ -75,6 +79,11 @@ export default function Home() {
     { icon: Wrench, name: 'Plumber', color: 'bg-cyan-100 text-cyan-700' },
     { icon: Truck, name: 'Loader', color: 'bg-green-100 text-green-700' },
     { icon: Sprout, name: 'Agriculture', color: 'bg-emerald-100 text-emerald-700' },
+    { icon: Users, name: 'Event Staff', color: 'bg-pink-100 text-pink-700' },
+    { icon: Car, name: 'Driver', color: 'bg-gray-100 text-gray-700' },
+    { icon: Home, name: 'Maid/Cook', color: 'bg-lime-100 text-lime-700' },
+    { icon: Shield, name: 'Security', color: 'bg-indigo-100 text-indigo-700' },
+    { icon: Wrench, name: 'Mechanic', color: 'bg-slate-100 text-slate-700' }
   ]
 
   const features = [
@@ -190,7 +199,7 @@ export default function Home() {
             <p className="text-gray-600">Choose from various categories of skilled labour</p>
           </div>
           
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {labourCategories.map((category, index) => {
               const Icon = category.icon
               return (
@@ -204,6 +213,60 @@ export default function Home() {
                 </Card>
               )
             })}
+          </div>
+          
+          <div className="text-center mt-6">
+            <p className="text-sm text-gray-600 mb-4">And 50+ more service categories available</p>
+            <Button variant="outline">
+              View All Categories <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          </div>
+        </div>
+      </section>
+
+      {/* Multi-City Operations */}
+      <section className="py-16 px-4 bg-white">
+        <div className="container mx-auto">
+          <div className="text-center mb-12">
+            <Badge className="mb-4 bg-green-100 text-green-700 hover:bg-green-100">
+              🏙️ Multi-City Operations
+            </Badge>
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">Available Across India</h2>
+            <p className="text-gray-600">Local pricing, regional language support, and city-specific features</p>
+          </div>
+          
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {[
+              { name: 'Mumbai', price: '₹149', factor: '×1.5', specialty: 'Financial Hub' },
+              { name: 'Delhi', price: '₹129', factor: '×1.3', specialty: 'Capital City' },
+              { name: 'Bangalore', price: '₹119', factor: '×1.2', specialty: 'IT Hub' },
+              { name: 'Chennai', price: '₹99', factor: 'Standard', specialty: 'Coastal City' },
+              { name: 'Kolkata', price: '₹89', factor: '×0.9', specialty: 'Cultural Capital' },
+              { name: 'Pune', price: '₹109', factor: '×1.1', specialty: 'Education Hub' },
+              { name: 'Hyderabad', price: '₹99', factor: 'Standard', specialty: 'Tech City' },
+              { name: 'Ahmedabad', price: '₹89', factor: '×0.9', specialty: 'Textile Hub' }
+            ].map((city, index) => (
+              <Card key={index} className="text-center hover:shadow-lg transition-shadow">
+                <CardContent className="p-4">
+                  <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center mx-auto mb-3">
+                    <Building className="w-6 h-6 text-orange-600" />
+                  </div>
+                  <h3 className="font-medium mb-1">{city.name}</h3>
+                  <p className="text-sm text-gray-600 mb-2">{city.specialty}</p>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="font-medium">{city.price}</span>
+                    <Badge variant="outline" className="text-xs">{city.factor}</Badge>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          
+          <div className="text-center">
+            <Button variant="outline">
+              <Globe className="w-4 h-4 mr-2" />
+              View All Cities
+            </Button>
           </div>
         </div>
       </section>

@@ -50,6 +50,7 @@ enum UserRole {
 model LabourProfile {
   id               String   @id @default(cuid())
   userId           String   @unique
+  cityId           String
   category         LabourCategory
   experience       Int      // years of experience
   hourlyWage       Int      // in rupees
@@ -70,6 +71,7 @@ model LabourProfile {
   updatedAt        DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  city City @relation(fields: [cityId], references: [id])
 
   @@map("labour_profiles")
 }
@@ -78,6 +80,7 @@ model LabourProfile {
 model EmployerProfile {
   id           String   @id @default(cuid())
   userId       String   @unique
+  cityId       String
   businessType String
   businessName String?
   location     String
@@ -90,12 +93,14 @@ model EmployerProfile {
   updatedAt    DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  city City @relation(fields: [cityId], references: [id])
 
   @@map("employer_profiles")
 }
 
-// Labour categories
+// Labour categories - Expanded with new service categories
 enum LabourCategory {
+  // Original Categories
   HELPER
   MASON
   PAINTER
@@ -108,6 +113,91 @@ enum LabourCategory {
   MECHANIC
   CLEANER
   SECURITY
+  
+  // Professional Services
+  AC_TECHNICIAN
+  REFRIGERATION_TECHNICIAN
+  SOLAR_PANEL_INSTALLER
+  NETWORK_TECHNICIAN
+  APPLIANCE_REPAIR
+  PEST_CONTROL
+  WATER_PURIFIER_TECHNICIAN
+  
+  // Event Services
+  EVENT_STAFF
+  DECORATOR
+  CATERER
+  WAITER_STAFF
+  CLEANING_STAFF
+  SECURITY_EVENT
+  SOUND_SYSTEM_TECHNICIAN
+  PHOTOGRAPHER
+  VIDEOGRAPHER
+  DJ_MUSICIAN
+  
+  // Construction Services
+  FOREMAN
+  SITE_SUPERVISOR
+  CONSTRUCTION_LABORER
+  CONCRETE_SPECIALIST
+  TILING_SPECIALIST
+  WATERPROOFING_SPECIALIST
+  SCAFFOLDER
+  DEMOLITION_WORKER
+  HEAVY_MACHINE_OPERATOR
+  
+  // Agricultural Services
+  FARM_WORKER
+  TRACTOR_DRIVER
+  IRRIGATION_SPECIALIST
+  CROP_HARVESTER
+  PESTICIDE_APPLICATOR
+  DAIRY_WORKER
+  POULTRY_WORKER
+  HORTICULTURIST
+  
+  // Domestic Services
+  MAID
+  COOK
+  DRIVER
+  BABYSITTER
+  ELDERLY_CARE
+  TUTOR
+  GARDENER
+  PET_CARE
+  LAUNDRY_SERVICE
+  
+  // Logistics & Transport
+  DELIVERY_PERSON
+  WAREHOUSE_WORKER
+  PACKER
+  LOADER_UNLOADER
+  TRUCK_DRIVER
+  COURIER
+  BIKE_MESSENGER
+  
+  // IT & Digital Services
+  COMPUTER_TECHNICIAN
+  PRINTER_TECHNICIAN
+  CCTV_INSTALLER
+  WEBSITE_DEVELOPER
+  GRAPHIC_DESIGNER
+  DATA_ENTRY_OPERATOR
+  
+  // Beauty & Wellness
+  BEAUTICIAN
+  HAIR_STYLIST
+  MASSAGE_THERAPIST
+  FITNESS_TRAINER
+  YOGA_INSTRUCTOR
+  
+  // Other Services
+  TAILOR
+  SHOE_REPAIR
+  KEY_MAKER
+  AUTOMOBILE_MECHANIC
+  BIKE_MECHANIC
+  CAR_WASH
 }
 
 // Verification status
@@ -123,6 +213,7 @@ model Booking {
   bookingNumber   String        @unique
   employerId      String
   labourId        String
+  cityId          String
   category        LabourCategory
   jobLocation     String
   latitude        Float?
@@ -130,15 +221,20 @@ model Booking {
   date            DateTime
   duration        BookingDuration // HALF_DAY or FULL_DAY
   labourCount     Int           @default(1)
-  totalAmount     Int           // ₹99 × labourCount
+  baseAmount      Int           // Base amount before city multiplier
+  cityMultiplier  Float         @default(1.0) // City-specific price multiplier
+  totalAmount     Int           // Final amount after multiplier
   status          BookingStatus @default(PENDING)
   paymentStatus   PaymentStatus @default(PENDING)
   specialRequests String?
+  transportNeeded Boolean       @default(false)
+  transportOption String?       // Transport option ID if needed
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
   employer User @relation("EmployerBookings", fields: [employerId], references: [id])
   labour   User @relation("LabourBookings", fields: [labourId], references: [id])
+  city     City @relation(fields: [cityId], references: [id])
   
   payments  Payment[]
   reviews   Review[]
@@ -258,4 +354,119 @@ model SystemSetting {
   description String?
 
   @@map("system_settings")
+}
+
+// City model for multi-city operations
+model City {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  state       String
+  country     String   @default("India")
+  latitude    Float
+  longitude   Float
+  timezone    String   @default("Asia/Kolkata")
+  isActive    Boolean  @default(true)
+  primaryLanguage String  @default("Hindi")
+  secondaryLanguages String? // JSON array of supported languages
+  basePrice   Int      @default(99) // Base booking fee for this city
+  priceMultiplier Float @default(1.0) // Price multiplier for regional variations
+  supportPhone String?
+  supportEmail String?
+  transportAvailable Boolean @default(true)
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  labourProfiles LabourProfile[]
+  employerProfiles EmployerProfile[]
+  bookings       Booking[]
+  citySettings   CitySetting[]
+  partners       Partner[]
+  transportOptions TransportOption[]
+
+  @@map("cities")
+}
+
+// City-specific settings
+model CitySetting {
+  id          String   @id @default(cuid())
+  cityId      String
+  settingKey  String
+  settingValue String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  city City @relation(fields: [cityId], references: [id], onDelete: Cascade)
+
+  @@unique([cityId, settingKey])
+  @@map("city_settings")
+}
+
+// Local partners in each city
+model Partner {
+  id          String   @id @default(cuid())
+  cityId      String
+  name        String
+  type        PartnerType
+  description String?
+  contactPerson String
+  contactPhone String
+  contactEmail String?
+  address     String?
+  services    String?  // JSON array of services offered
+  commissionRate Float @default(0.10) // 10% commission
+  isActive    Boolean  @default(true)
+  rating      Float    @default(0)
+  totalJobs   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  city City @relation(fields: [cityId], references: [id], onDelete: Cascade)
+
+  @@map("partners")
+}
+
+// Partner types
+enum PartnerType {
+  TRANSPORT
+  EQUIPMENT_RENTAL
+  TRAINING_CENTER
+  LOCAL_CONTRACTOR
+  FINANCIAL_SERVICE
+  INSURANCE_PROVIDER
+  LEGAL_SERVICE
+  MEDICAL_SERVICE
+}
+
+// Transport options in each city
+model TransportOption {
+  id          String   @id @default(cuid())
+  cityId      String
+  name        String
+  type        TransportType
+  description String?
+  contactInfo String
+  pricing     String?  // Pricing information
+  coverage    String?  // Coverage areas
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  city City @relation(fields: [cityId], references: [id], onDelete: Cascade)
+
+  @@map("transport_options")
+}
+
+// Transport types
+enum TransportType {
+  AUTO_RICKSHAW
+  TAXI
+  TEMPO
+  MINIBUS
+  TRUCK
+  BIKE_TAXI
+  SHARED_TRANSPORT
+  COMPANY_TRANSPORT
 }
