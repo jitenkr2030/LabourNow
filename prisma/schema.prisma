@@ -1,8 +1,4 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+// LabourNow Platform Database Schema
 
 generator client {
   provider = "prisma-client-js"
@@ -13,20 +9,253 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// User model with role-based access
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String   @id @default(cuid())
+  mobile      String   @unique
+  name        String
+  email       String?  @unique
+  role        UserRole @default(LABOUR)
+  avatar      String?
+  isVerified  Boolean  @default(false)
+  isBlocked   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Labour specific fields
+  labourProfile LabourProfile?
+  
+  // Employer specific fields
+  employerProfile EmployerProfile?
+  
+  // Relations
+  sentBookings     Booking[]       @relation("EmployerBookings")
+  receivedBookings Booking[]       @relation("LabourBookings")
+  givenReviews     Review[]        @relation("GivenReviews")
+  receivedReviews  Review[]        @relation("ReceivedReviews")
+  notifications    Notification[]
+  payments         Payment[]
+
+  @@map("users")
 }
 
-model Post {
-  id        String   @id @default(cuid())
+// User roles enum
+enum UserRole {
+  LABOUR
+  EMPLOYER
+  ADMIN
+}
+
+// Labour worker profile
+model LabourProfile {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  category         LabourCategory
+  experience       Int      // years of experience
+  hourlyWage       Int      // in rupees
+  bio              String?
+  location         String
+  latitude         Float?
+  longitude        Float?
+  workRadius       Int      @default(10) // km
+  isAvailable      Boolean  @default(true)
+  workPhotos       String?  // JSON array of URLs
+  idDocuments      String?  // JSON array of URLs
+  verificationBadge VerificationStatus @default(PENDING)
+  rating           Float    @default(0)
+  totalJobs        Int      @default(0)
+  languages        String?  // JSON array ["Hindi", "English", "Regional"]
+  workPreferences  Json?    // flexible working hours, etc.
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("labour_profiles")
+}
+
+// Employer/Contractor profile
+model EmployerProfile {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  businessType String
+  businessName String?
+  location     String
+  latitude     Float?
+  longitude    Float?
+  gstNumber    String?
+  bio          String?
+  totalBookings Int     @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("employer_profiles")
+}
+
+// Labour categories
+enum LabourCategory {
+  HELPER
+  MASON
+  PAINTER
+  ELECTRICIAN
+  PLUMBER
+  LOADER
+  AGRICULTURE_WORKER
+  CARPENTER
+  WELDER
+  MECHANIC
+  CLEANER
+  SECURITY
+}
+
+// Verification status
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+// Booking model
+model Booking {
+  id              String        @id @default(cuid())
+  bookingNumber   String        @unique
+  employerId      String
+  labourId        String
+  category        LabourCategory
+  jobLocation     String
+  latitude        Float?
+  longitude       Float?
+  date            DateTime
+  duration        BookingDuration // HALF_DAY or FULL_DAY
+  labourCount     Int           @default(1)
+  totalAmount     Int           // ₹99 × labourCount
+  status          BookingStatus @default(PENDING)
+  paymentStatus   PaymentStatus @default(PENDING)
+  specialRequests String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  employer User @relation("EmployerBookings", fields: [employerId], references: [id])
+  labour   User @relation("LabourBookings", fields: [labourId], references: [id])
+  
+  payments  Payment[]
+  reviews   Review[]
+
+  @@map("bookings")
+}
+
+// Booking duration
+enum BookingDuration {
+  HALF_DAY
+  FULL_DAY
+}
+
+// Booking status
+enum BookingStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  EXPIRED
+}
+
+// Payment status
+enum PaymentStatus {
+  PENDING
+  PAID
+  REFUNDED
+  FAILED
+}
+
+// Payment model
+model Payment {
+  id            String        @id @default(cuid())
+  bookingId     String
+  userId        String
+  amount        Int
+  paymentMethod PaymentMethod
+  transactionId String?       @unique
+  status        PaymentStatus @default(PENDING)
+  gstAmount     Int           @default(0)
+  totalAmount   Int
+  receiptUrl    String?
+  refundAmount  Int?          @default(0)
+  refundReason  String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@map("payments")
+}
+
+// Payment methods
+enum PaymentMethod {
+  UPI
+  WALLET
+  CARD
+  CASH
+}
+
+// Review/Rating model
+model Review {
+  id         String   @id @default(cuid())
+  bookingId  String   @unique
+  reviewerId String   // employer reviewing labour
+  revieweeId String   // labour being reviewed
+  rating     Int      // 1-5 stars
+  comment    String?
+  isReported Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  reviewer User    @relation("GivenReviews", fields: [reviewerId], references: [id])
+  reviewee User    @relation("ReceivedReviews", fields: [revieweeId], references: [id])
+
+  @@map("reviews")
+}
+
+// Notification model
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
   title     String
-  content   String?
-  published Boolean  @default(false)
-  authorId  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  message   String
+  type      NotificationType
+  isRead    Boolean          @default(false)
+  data      Json?            // additional data like bookingId, etc.
+  createdAt DateTime         @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+// Notification types
+enum NotificationType {
+  BOOKING_CONFIRMED
+  BOOKING_ACCEPTED
+  BOOKING_REJECTED
+  BOOKING_CANCELLED
+  JOB_REMINDER
+  PAYMENT_RECEIVED
+  PAYMENT_FAILED
+  REVIEW_RECEIVED
+  SYSTEM_UPDATE
+}
+
+// System settings (for admin)
+model SystemSetting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String
+  description String?
+
+  @@map("system_settings")
 }
