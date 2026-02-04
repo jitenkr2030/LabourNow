@@ -26,7 +26,7 @@ import {
   Phone,
   MessageSquare,
   Car,
-  Home,
+  Home as HomeIcon,
   Building,
   Globe
 } from 'lucide-react'
@@ -81,7 +81,7 @@ export default function Home() {
     { icon: Sprout, name: 'Agriculture', color: 'bg-emerald-100 text-emerald-700' },
     { icon: Users, name: 'Event Staff', color: 'bg-pink-100 text-pink-700' },
     { icon: Car, name: 'Driver', color: 'bg-gray-100 text-gray-700' },
-    { icon: Home, name: 'Maid/Cook', color: 'bg-lime-100 text-lime-700' },
+    { icon: HomeIcon, name: 'Maid/Cook', color: 'bg-lime-100 text-lime-700' },
     { icon: Shield, name: 'Security', color: 'bg-indigo-100 text-indigo-700' },
     { icon: Wrench, name: 'Mechanic', color: 'bg-slate-100 text-slate-700' }
   ]
