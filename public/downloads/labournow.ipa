@@ -1,0 +1,45 @@
+# LabourNow iOS IPA Download
+
+This is a placeholder file for the iOS IPA download.
+In a real application, this would be the actual compiled iOS IPA file.
+
+## Installation Instructions:
+
+### For iOS Devices:
+1. Download the IPA file
+2. Connect your iOS device to your computer
+3. Open iTunes or Finder
+4. Drag the IPA file to your device
+5. Follow the on-screen installation prompts
+
+### Alternative Installation:
+1. On your iOS device, go to Settings
+2. Go to General > Device Management
+3. Trust the developer certificate
+4. Open the app and follow prompts
+
+## App Features:
+- ✅ Works offline
+- ✅ Fast loading
+- ✅ Full screen experience
+- ✅ No app store required
+- ✅ Always updated
+- ✅ No unnecessary permissions
+
+## Requirements:
+- iOS 12.0 or higher
+- 100MB of free storage space
+- Internet connection for initial setup
+- Computer with iTunes or Finder (for side-loading)
+
+## File Information:
+- File Size: ~35MB
+- Version: 1.0.0
+- Last Updated: 2024-01-15
+- Minimum iOS Version: 12.0
+- Bundle ID: com.labournow.ios
+
+## Enterprise Distribution:
+This app is distributed via enterprise certificate for direct installation without App Store.
+
+For support, contact: support@labournow.in

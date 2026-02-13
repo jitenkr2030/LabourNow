@@ -1,0 +1,613 @@
+// LabourNow Platform Database Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// User model with role-based access
+model User {
+  id          String   @id @default(cuid())
+  mobile      String   @unique
+  name        String
+  email       String?  @unique
+  role        UserRole @default(LABOUR)
+  avatar      String?
+  isVerified  Boolean  @default(false)
+  isBlocked   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Labour specific fields
+  labourProfile LabourProfile?
+  
+  // Employer specific fields
+  employerProfile EmployerProfile?
+  
+  // Relations
+  sentBookings     Booking[]       @relation("EmployerBookings")
+  receivedBookings Booking[]       @relation("LabourBookings")
+  givenReviews     Review[]        @relation("GivenReviews")
+  receivedReviews  Review[]        @relation("ReceivedReviews")
+  notifications    Notification[]
+  payments         Payment[]
+  sentMessages     ChatMessage[]    @relation("SentMessages")
+  receivedMessages ChatMessage[]    @relation("ReceivedMessages")
+  auditLogs        AuditLog[]
+  consents         UserConsent[]
+  dataProcessingRecords DataProcessingRecord[]
+  deletionRequests DataDeletionRequest[]
+
+  @@map("users")
+}
+
+// User roles enum
+enum UserRole {
+  LABOUR
+  EMPLOYER
+  ADMIN
+}
+
+// Labour worker profile
+model LabourProfile {
+  id               String   @id @default(cuid())
+  userId           String   @unique
+  cityId           String
+  category         LabourCategory
+  experience       Int      // years of experience
+  hourlyWage       Int      // in rupees
+  bio              String?
+  avatar           String?  // Profile picture URL
+  location         String
+  latitude         Float?
+  longitude        Float?
+  workRadius       Int      @default(10) // km
+  isAvailable      Boolean  @default(true)
+  workPhotos       String?  // JSON array of URLs
+  idDocuments      String?  // JSON array of URLs
+  verificationBadge VerificationStatus @default(PENDING)
+  rating           Float    @default(0)
+  totalJobs        Int      @default(0)
+  languages        String?  // JSON array ["Hindi", "English", "Regional"]
+  workPreferences  Json?    // flexible working hours, etc.
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  city City @relation(fields: [cityId], references: [id])
+
+  @@map("labour_profiles")
+}
+
+// Employer/Contractor profile
+model EmployerProfile {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  cityId       String
+  businessType String
+  businessName String?
+  avatar       String?  // Profile picture URL
+  location     String
+  latitude     Float?
+  longitude    Float?
+  gstNumber    String?
+  bio          String?
+  totalBookings Int     @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  city City @relation(fields: [cityId], references: [id])
+
+  @@map("employer_profiles")
+}
+
+// Labour categories - Expanded with new service categories
+enum LabourCategory {
+  // Original Categories
+  HELPER
+  MASON
+  PAINTER
+  ELECTRICIAN
+  PLUMBER
+  LOADER
+  AGRICULTURE_WORKER
+  CARPENTER
+  WELDER
+  MECHANIC
+  CLEANER
+  SECURITY
+  
+  // Professional Services
+  AC_TECHNICIAN
+  REFRIGERATION_TECHNICIAN
+  SOLAR_PANEL_INSTALLER
+  NETWORK_TECHNICIAN
+  APPLIANCE_REPAIR
+  PEST_CONTROL
+  WATER_PURIFIER_TECHNICIAN
+  
+  // Event Services
+  EVENT_STAFF
+  DECORATOR
+  CATERER
+  WAITER_STAFF
+  CLEANING_STAFF
+  SECURITY_EVENT
+  SOUND_SYSTEM_TECHNICIAN
+  PHOTOGRAPHER
+  VIDEOGRAPHER
+  DJ_MUSICIAN
+  
+  // Construction Services
+  FOREMAN
+  SITE_SUPERVISOR
+  CONSTRUCTION_LABORER
+  CONCRETE_SPECIALIST
+  TILING_SPECIALIST
+  WATERPROOFING_SPECIALIST
+  SCAFFOLDER
+  DEMOLITION_WORKER
+  HEAVY_MACHINE_OPERATOR
+  
+  // Agricultural Services
+  FARM_WORKER
+  TRACTOR_DRIVER
+  IRRIGATION_SPECIALIST
+  CROP_HARVESTER
+  PESTICIDE_APPLICATOR
+  DAIRY_WORKER
+  POULTRY_WORKER
+  HORTICULTURIST
+  
+  // Domestic Services
+  MAID
+  COOK
+  DRIVER
+  BABYSITTER
+  ELDERLY_CARE
+  TUTOR
+  GARDENER
+  PET_CARE
+  LAUNDRY_SERVICE
+  
+  // Logistics & Transport
+  DELIVERY_PERSON
+  WAREHOUSE_WORKER
+  PACKER
+  LOADER_UNLOADER
+  TRUCK_DRIVER
+  COURIER
+  BIKE_MESSENGER
+  
+  // IT & Digital Services
+  COMPUTER_TECHNICIAN
+  PRINTER_TECHNICIAN
+  CCTV_INSTALLER
+  WEBSITE_DEVELOPER
+  GRAPHIC_DESIGNER
+  DATA_ENTRY_OPERATOR
+  
+  // Beauty & Wellness
+  BEAUTICIAN
+  HAIR_STYLIST
+  MASSAGE_THERAPIST
+  FITNESS_TRAINER
+  YOGA_INSTRUCTOR
+  
+  // Other Services
+  TAILOR
+  SHOE_REPAIR
+  KEY_MAKER
+  AUTOMOBILE_MECHANIC
+  BIKE_MECHANIC
+  CAR_WASH
+}
+
+// Verification status
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+// Booking model
+model Booking {
+  id              String        @id @default(cuid())
+  bookingNumber   String        @unique
+  employerId      String
+  labourId        String
+  cityId          String
+  category        LabourCategory
+  jobLocation     String
+  latitude        Float?
+  longitude       Float?
+  date            DateTime
+  duration        BookingDuration // HALF_DAY or FULL_DAY
+  labourCount     Int           @default(1)
+  baseAmount      Int           // Base amount before city multiplier
+  cityMultiplier  Float         @default(1.0) // City-specific price multiplier
+  totalAmount     Int           // Final amount after multiplier
+  status          BookingStatus @default(PENDING)
+  paymentStatus   PaymentStatus @default(PENDING)
+  specialRequests String?
+  transportNeeded Boolean       @default(false)
+  transportOption String?       // Transport option ID if needed
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  employer User @relation("EmployerBookings", fields: [employerId], references: [id])
+  labour   User @relation("LabourBookings", fields: [labourId], references: [id])
+  city     City @relation(fields: [cityId], references: [id])
+  
+  payments  Payment[]
+  reviews   Review[]
+  chatMessages ChatMessage[]
+
+  @@map("bookings")
+}
+
+// Booking duration
+enum BookingDuration {
+  HALF_DAY
+  FULL_DAY
+}
+
+// Booking status
+enum BookingStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  EXPIRED
+}
+
+// Payment status
+enum PaymentStatus {
+  PENDING
+  PAID
+  REFUNDED
+  FAILED
+}
+
+// Payment model
+model Payment {
+  id            String        @id @default(cuid())
+  bookingId     String
+  userId        String
+  amount        Int
+  paymentMethod PaymentMethod
+  transactionId String?       @unique
+  status        PaymentStatus @default(PENDING)
+  gstAmount     Int           @default(0)
+  totalAmount   Int
+  receiptUrl    String?
+  refundAmount  Int?          @default(0)
+  refundReason  String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id])
+
+  @@map("payments")
+}
+
+// Payment methods
+enum PaymentMethod {
+  UPI
+  WALLET
+  CARD
+  CASH
+}
+
+// Review/Rating model
+model Review {
+  id         String   @id @default(cuid())
+  bookingId  String   @unique
+  reviewerId String   // employer reviewing labour
+  revieweeId String   // labour being reviewed
+  rating     Int      // 1-5 stars
+  comment    String?
+  isReported Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  reviewer User    @relation("GivenReviews", fields: [reviewerId], references: [id])
+  reviewee User    @relation("ReceivedReviews", fields: [revieweeId], references: [id])
+
+  @@map("reviews")
+}
+
+// Chat Message model
+model ChatMessage {
+  id          String   @id @default(cuid())
+  bookingId   String
+  senderId    String
+  receiverId  String
+  content     String
+  messageType MessageType @default(TEXT)
+  fileUrl     String?  // For image/file messages
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  sender   User    @relation("SentMessages", fields: [senderId], references: [id])
+  receiver User    @relation("ReceivedMessages", fields: [receiverId], references: [id])
+
+  @@map("chat_messages")
+}
+
+// Message types
+enum MessageType {
+  TEXT
+  IMAGE
+  FILE
+}
+
+// Notification model
+model Notification {
+  id          String   @id @default(cuid())
+  userId      String
+  title       String
+  message     String
+  type        NotificationType
+  read        Boolean  @default(false)
+  actionUrl   String?  // URL to navigate to when clicked
+  actionText  String?  // Text for action button
+  metadata    Json?    // Additional data like bookingId, messageId, etc.
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+// Notification types
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  ERROR
+  BOOKING
+  MESSAGE
+  PAYMENT
+  SYSTEM
+}
+
+// System settings (for admin)
+model SystemSetting {
+  id    String @id @default(cuid())
+  key   String @unique
+  value String
+  description String?
+
+  @@map("system_settings")
+}
+
+// City model for multi-city operations
+model City {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  state       String
+  country     String   @default("India")
+  latitude    Float
+  longitude   Float
+  timezone    String   @default("Asia/Kolkata")
+  isActive    Boolean  @default(true)
+  primaryLanguage String  @default("Hindi")
+  secondaryLanguages String? // JSON array of supported languages
+  basePrice   Int      @default(99) // Base booking fee for this city
+  priceMultiplier Float @default(1.0) // Price multiplier for regional variations
+  supportPhone String?
+  supportEmail String?
+  transportAvailable Boolean @default(true)
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  labourProfiles LabourProfile[]
+  employerProfiles EmployerProfile[]
+  bookings       Booking[]
+  citySettings   CitySetting[]
+  partners       Partner[]
+  transportOptions TransportOption[]
+
+  @@map("cities")
+}
+
+// City-specific settings
+model CitySetting {
+  id          String   @id @default(cuid())
+  cityId      String
+  settingKey  String
+  settingValue String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  city City @relation(fields: [cityId], references: [id], onDelete: Cascade)
+
+  @@unique([cityId, settingKey])
+  @@map("city_settings")
+}
+
+// Local partners in each city
+model Partner {
+  id          String   @id @default(cuid())
+  cityId      String
+  name        String
+  type        PartnerType
+  description String?
+  contactPerson String
+  contactPhone String
+  contactEmail String?
+  address     String?
+  services    String?  // JSON array of services offered
+  commissionRate Float @default(0.10) // 10% commission
+  isActive    Boolean  @default(true)
+  rating      Float    @default(0)
+  totalJobs   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  city City @relation(fields: [cityId], references: [id], onDelete: Cascade)
+
+  @@map("partners")
+}
+
+// Partner types
+enum PartnerType {
+  TRANSPORT
+  EQUIPMENT_RENTAL
+  TRAINING_CENTER
+  LOCAL_CONTRACTOR
+  FINANCIAL_SERVICE
+  INSURANCE_PROVIDER
+  LEGAL_SERVICE
+  MEDICAL_SERVICE
+}
+
+// Transport options in each city
+model TransportOption {
+  id          String   @id @default(cuid())
+  cityId      String
+  name        String
+  type        TransportType
+  description String?
+  contactInfo String
+  pricing     String?  // Pricing information
+  coverage    String?  // Coverage areas
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  city City @relation(fields: [cityId], references: [id], onDelete: Cascade)
+
+  @@map("transport_options")
+}
+
+// Transport types
+enum TransportType {
+  AUTO_RICKSHAW
+  TAXI
+  TEMPO
+  MINIBUS
+  TRUCK
+  BIKE_TAXI
+  SHARED_TRANSPORT
+  COMPANY_TRANSPORT
+}
+
+// Audit Log model for tracking all system activities
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String?  // User who performed the action (null for system actions)
+  action      String   // Action performed (e.g., "user.login", "booking.create", "admin.block_user")
+  resource    String?  // Resource type (e.g., "user", "booking", "payment")
+  resourceId  String?  // ID of the resource that was acted upon
+  ipAddress   String?  // IP address of the request
+  userAgent   String?  // User agent string
+  metadata    Json?    // Additional context data
+  oldValues   Json?    // Previous values before update (for audit trail)
+  newValues   Json?    // New values after update
+  severity    AuditSeverity @default(INFO)
+  success     Boolean  @default(true)
+  errorMessage String? // Error message if action failed
+  sessionId   String?  // Session identifier
+  requestId   String?  // Request identifier for tracing
+  createdAt   DateTime @default(now())
+
+  @@map("audit_logs")
+}
+
+// Audit severity levels
+enum AuditSeverity {
+  DEBUG
+  INFO
+  WARNING
+  ERROR
+  CRITICAL
+}
+
+// User consent records for GDPR compliance
+model UserConsent {
+  id          String   @id @default(cuid())
+  userId      String
+  consentType ConsentType
+  granted     Boolean  @default(false)
+  grantedAt   DateTime @default(now())
+  revokedAt   DateTime?
+  ipAddress   String?
+  userAgent   String?
+  version     String   @default("1.0")
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, consentType])
+  @@map("user_consents")
+}
+
+// Consent types
+enum ConsentType {
+  MARKETING_COMMUNICATIONS
+  DATA_PROCESSING
+  ANALYTICS_TRACKING
+  COOKIES
+  LOCATION_SHARING
+  PROFILE_VISIBILITY
+  THIRD_PARTY_SHARING
+  EMAIL_NOTIFICATIONS
+  SMS_NOTIFICATIONS
+}
+
+// Data processing records for GDPR compliance
+model DataProcessingRecord {
+  id            String   @id @default(cuid())
+  userId        String
+  purpose       String
+  legalBasis    String
+  dataCategories String  // JSON array of data categories
+  recipient     String?  // Data recipient
+  retentionPeriod String // How long data will be retained
+  automatedDecisionMaking Boolean @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("data_processing_records")
+}
+
+// Data deletion requests for GDPR compliance
+model DataDeletionRequest {
+  id            String   @id @default(cuid())
+  userId        String
+  reason        String
+  status        DeletionStatus @default(PENDING)
+  requestedAt   DateTime @default(now())
+  processedAt   DateTime?
+  processedBy   String?  // Admin who processed the request
+  adminNotes    String?
+  verificationToken String? // Token to verify deletion request
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("data_deletion_requests")
+}
+
+// Data deletion status
+enum DeletionStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  REJECTED
+}

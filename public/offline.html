@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Offline - LabourNow</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .offline-container {
+      background: white;
+      border-radius: 20px;
+      padding: 40px;
+      text-align: center;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+      max-width: 400px;
+      width: 100%;
+    }
+
+    .offline-icon {
+      font-size: 80px;
+      margin-bottom: 20px;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+
+    h1 {
+      color: #333;
+      font-size: 28px;
+      margin-bottom: 15px;
+      font-weight: 600;
+    }
+
+    .offline-message {
+      color: #666;
+      font-size: 16px;
+      line-height: 1.6;
+      margin-bottom: 30px;
+    }
+
+    .offline-features {
+      background: #f8f9fa;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 30px;
+      text-align: left;
+    }
+
+    .offline-features h3 {
+      color: #333;
+      font-size: 16px;
+      margin-bottom: 15px;
+      font-weight: 600;
+    }
+
+    .feature-list {
+      list-style: none;
+    }
+
+    .feature-list li {
+      color: #555;
+      font-size: 14px;
+      margin-bottom: 8px;
+      padding-left: 20px;
+      position: relative;
+    }
+
+    .feature-list li:before {
+      content: "✓";
+      position: absolute;
+      left: 0;
+      color: #28a745;
+      font-weight: bold;
+    }
+
+    .retry-btn {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      border-radius: 25px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-right: 10px;
+    }
+
+    .retry-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(102, 126, 234, 0.3);
+    }
+
+    .offline-btn {
+      background: #6c757d;
+      color: white;
+      border: none;
+      padding: 15px 30px;
+      border-radius: 25px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .offline-btn:hover {
+      background: #5a6268;
+      transform: translateY(-2px);
+    }
+
+    .connection-status {
+      margin-top: 20px;
+      padding: 10px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+    }
+
+    .status-offline {
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+
+    .status-online {
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+
+    .button-group {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    @media (max-width: 480px) {
+      .offline-container {
+        padding: 30px 20px;
+      }
+
+      h1 {
+        font-size: 24px;
+      }
+
+      .offline-message {
+        font-size: 14px;
+      }
+
+      .button-group {
+        flex-direction: column;
+      }
+
+      .retry-btn, .offline-btn {
+        width: 100%;
+        margin-right: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="offline-container">
+    <div class="offline-icon">📱</div>
+    <h1>You're Offline</h1>
+    <p class="offline-message">
+      It looks like you've lost your internet connection. Don't worry, some features are still available!
+    </p>
+
+    <div class="offline-features">
+      <h3>Available Offline</h3>
+      <ul class="feature-list">
+        <li>View previously loaded profiles</li>
+        <li>Browse cached search results</li>
+        <li>Access your dashboard</li>
+        <li>View saved bookings</li>
+      </ul>
+    </div>
+
+    <div class="button-group">
+      <button class="retry-btn" onclick="checkConnection()">
+        🔄 Try Again
+      </button>
+      <button class="offline-btn" onclick="continueOffline()">
+        📱 Continue Offline
+      </button>
+    </div>
+
+    <div id="connectionStatus" class="connection-status status-offline">
+      📡 Checking connection...
+    </div>
+  </div>
+
+  <script>
+    let isOnline = navigator.onLine;
+
+    // Update connection status
+    function updateConnectionStatus() {
+      const statusElement = document.getElementById('connectionStatus');
+      if (navigator.onLine) {
+        statusElement.textContent = '🌐 Connected to internet';
+        statusElement.className = 'connection-status status-online';
+      } else {
+        statusElement.textContent = '📡 No internet connection';
+        statusElement.className = 'connection-status status-offline';
+      }
+    }
+
+    // Check connection and reload if online
+    async function checkConnection() {
+      const statusElement = document.getElementById('connectionStatus');
+      statusElement.textContent = '🔄 Checking connection...';
+      
+      try {
+        // Try to fetch a small resource
+        const response = await fetch('/api/cities', { 
+          method: 'HEAD',
+          cache: 'no-cache'
+        });
+        
+        if (response.ok) {
+          statusElement.textContent = '✅ Connection restored! Reloading...';
+          setTimeout(() => {
+            window.location.reload();
+          }, 1000);
+        } else {
+          throw new Error('Network response not ok');
+        }
+      } catch (error) {
+        statusElement.textContent = '❌ Still offline. Please try again.';
+        updateConnectionStatus();
+      }
+    }
+
+    // Continue in offline mode
+    function continueOffline() {
+      // Try to navigate to the last known good page
+      const lastPage = localStorage.getItem('lastPage') || '/';
+      window.location.href = lastPage;
+    }
+
+    // Listen for online/offline events
+    window.addEventListener('online', () => {
+      updateConnectionStatus();
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    });
+
+    window.addEventListener('offline', updateConnectionStatus);
+
+    // Initialize
+    updateConnectionStatus();
+
+    // Auto-check connection every 10 seconds
+    setInterval(() => {
+      if (!navigator.onLine) {
+        checkConnection();
+      }
+    }, 10000);
+
+    // Save current page before going offline
+    window.addEventListener('beforeunload', () => {
+      localStorage.setItem('lastPage', window.location.pathname);
+    });
+  </script>
+</body>
+</html>
