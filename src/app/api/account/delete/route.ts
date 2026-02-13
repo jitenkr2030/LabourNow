@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { z } from 'zod'
-import { DataSubjectRights } from '@/lib/gdpr'
-import { logDataAccess, logAuthEvent } from '@/lib/audit'
+import { logAuthEvent } from '@/lib/audit'
 
 const deleteAccountSchema = z.object({
   reason: z.string().min(10, 'Reason must be at least 10 characters').max(500, 'Reason cannot exceed 500 characters'),
@@ -60,7 +59,16 @@ export async function POST(request: NextRequest) {
     // For this demo, we'll skip password verification since it's OTP-based auth
 
     // Create deletion request
-    const verificationToken = await DataSubjectRights.requestDeletion(userId, reason)
+    const verificationToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
+
+    await db.dataDeletionRequest.create({
+      data: {
+        userId,
+        reason,
+        status: 'PENDING',
+        verificationToken
+      }
+    })
 
     // Log account deletion request
     await logAuthEvent('login', userId, user.mobile, true, undefined, request.headers.get('x-request-id') || undefined)
@@ -192,12 +200,19 @@ export async function DELETE(request: NextRequest) {
     }
 
     // Process the deletion request
-    await DataSubjectRights.processDeletionRequest(
-      deletionRequest.id,
-      userId, // User is approving their own deletion
-      true,
-      'User confirmed account deletion'
-    )
+    await db.dataDeletionRequest.update({
+      where: { id: deletionRequest.id },
+      data: {
+        status: 'COMPLETED',
+        processedAt: new Date(),
+        processedBy: userId
+      }
+    })
+
+    // Delete user account
+    await db.user.delete({
+      where: { id: userId }
+    })
 
     // Log successful account deletion
     // await logAuthEvent('logout', userId, undefined, true, undefined, request.headers.get('x-request-id') || undefined)

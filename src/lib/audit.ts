@@ -68,7 +68,7 @@ export function extractRequestInfo(request: NextRequest): {
   ipAddress: string
   userAgent: string
 } {
-  const ipAddress = request.ip || 
+  const ipAddress = (request as any).ip || 
     request.headers.get('x-forwarded-for') || 
     request.headers.get('x-real-ip') || 
     'unknown'

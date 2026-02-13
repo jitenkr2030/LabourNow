@@ -89,7 +89,7 @@ const ADMIN_ENDPOINTS = [
 
 export async function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl
-  const ip = request.ip || request.headers.get('x-forwarded-for') || 'unknown'
+  const ip = (request as any).ip || request.headers.get('x-forwarded-for') || 'unknown'
   const method = request.method
 
   // Log request for audit trail

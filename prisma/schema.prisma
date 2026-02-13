@@ -37,7 +37,7 @@ model User {
   payments         Payment[]
   sentMessages     ChatMessage[]    @relation("SentMessages")
   receivedMessages ChatMessage[]    @relation("ReceivedMessages")
-  auditLogs        AuditLog[]
+  auditLogs        AuditLog[]              @relation("UserAuditLogs")
   consents         UserConsent[]
   dataProcessingRecords DataProcessingRecord[]
   deletionRequests DataDeletionRequest[]
@@ -527,6 +527,7 @@ model AuditLog {
   createdAt   DateTime @default(now())
 
   @@map("audit_logs")
+  user User? @relation("UserAuditLogs", fields: [userId], references: [id], onDelete: Cascade)
 }
 
 // Audit severity levels
